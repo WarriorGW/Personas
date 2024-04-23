@@ -1,7 +1,7 @@
 import { type User, SortBy } from "../types.d";
 
 interface Props {
-	handleDelete: (uuid: string) => void;
+	handleDelete?: (uuid: string) => void;
 	changeSorting: (sort: SortBy) => void;
 	showColors: boolean;
 	users: User[];
@@ -22,7 +22,7 @@ function UsersList({ users, showColors, handleDelete, changeSorting }: Props) {
 					<th className="pointer" onClick={() => changeSorting(SortBy.COUNTRY)}>
 						Pais
 					</th>
-					<th>Acciones</th>
+					{/* <th>Acciones</th> */}
 				</tr>
 			</thead>
 			<tbody>
@@ -37,11 +37,11 @@ function UsersList({ users, showColors, handleDelete, changeSorting }: Props) {
 							<td>{u.name.first}</td>
 							<td>{u.name.last}</td>
 							<td>{u.location.country}</td>
-							<td>
+							{/* <td>
 								<button onClick={() => handleDelete(u.login.uuid)}>
 									Eliminar
 								</button>
-							</td>
+							</td> */}
 						</tr>
 					);
 				})}

@@ -41,10 +41,10 @@ function App() {
 		setSorting(sort);
 	};
 
-	const handleDelete = (uuid: string) => {
-		// const filteredUsers = users.filter((u) => u.login.uuid !== uuid);
-		// setUsers(filteredUsers);
-	};
+	// const handleDelete = (uuid: string) => {
+	// 	const filteredUsers = users.filter((u) => u.login.uuid !== uuid);
+	// 	setUsers(filteredUsers);
+	// };
 
 	const handleReset = async () => {
 		await refetch();
@@ -100,7 +100,7 @@ function App() {
 					<>
 						<UsersList
 							changeSorting={handleChangeSort}
-							handleDelete={handleDelete}
+							// handleDelete={handleDelete}
 							showColors={colored}
 							users={sortedUsers}
 						/>
