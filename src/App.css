@@ -26,3 +26,7 @@ table {
 	gap: 1rem;
 	margin-bottom: 30px;
 }
+
+.d-none {
+	opacity: 0;
+}

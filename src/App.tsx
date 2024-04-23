@@ -1,17 +1,32 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import UsersList from "./components/UsersList";
 import { SortBy, type User } from "./types.d";
 
+import { useIntersectionObserver } from "./hooks/useIntersectionObserver";
+import { useUsers } from "./hooks/useUsers";
+
+import Results from "./components/Results";
+
 function App() {
-	const [users, setUsers] = useState<User[]>([]);
+	const { isLoading, isError, users, refetch, fetchNextPage, hasNextPage } =
+		useUsers();
+
 	const [colored, setColored] = useState(false);
 	const [sorting, setSorting] = useState<SortBy>(SortBy.NONE);
-	const originalUsers = useRef<User[]>([]);
+	// const originalUsers = useRef<User[]>([]);
 	const [filterC, setFilterC] = useState<string | null>(null);
 
-	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState(false);
+	const { isIntersecting, ref } = useIntersectionObserver({
+		threshold: 0.5,
+	});
+
+	useEffect(() => {
+		if (isIntersecting) {
+			console.log("Cargando siguiente pagina");
+			fetchNextPage();
+		}
+	}, [isIntersecting]);
 
 	const toggleColors = () => {
 		setColored(!colored);
@@ -27,18 +42,18 @@ function App() {
 	};
 
 	const handleDelete = (uuid: string) => {
-		const filteredUsers = users.filter((u) => u.login.uuid !== uuid);
-		setUsers(filteredUsers);
+		// const filteredUsers = users.filter((u) => u.login.uuid !== uuid);
+		// setUsers(filteredUsers);
 	};
 
-	const handleReset = () => {
-		setUsers(originalUsers.current);
+	const handleReset = async () => {
+		await refetch();
 	};
 
 	const filteredUsers = useMemo(() => {
 		return typeof filterC === "string"
-			? users.filter((u) => {
-					return u.location.country
+			? users.filter((user) => {
+					return user.location.country
 						.toLowerCase()
 						.includes(filterC.toLowerCase());
 			  })
@@ -46,52 +61,27 @@ function App() {
 	}, [users, filterC]);
 
 	const sortedUsers = useMemo(() => {
-		if (sorting === SortBy.NAME) {
-			return filteredUsers.toSorted((a, b) => {
-				return a.name.first.localeCompare(b.name.first);
-			});
-		}
-		if (sorting === SortBy.LAST) {
-			return filteredUsers.toSorted((a, b) => {
-				return a.name.last.localeCompare(b.name.last);
-			});
-		}
-		if (sorting === SortBy.COUNTRY) {
-			return filteredUsers.toSorted((a, b) => {
-				return a.location.country.localeCompare(b.location.country);
-			});
-		}
-		return filteredUsers;
-	}, [filteredUsers, sorting]);
+		console.log("calculate sortedUsers");
 
-	useEffect(() => {
-		setIsLoading(true);
-		setError(false);
-		fetch("https://randomuser.me/api?results=10")
-			.then(async (res) => {
-				if (!res.ok) {
-					throw new Error("Error al cargar los datos"); // Forma correcta de validar errores con fetch
-					// axios si lo gestiona con el catch
-					// axios.get('https://randomuser.me/api?results=10').catch((err) => console.log(err))
-				}
-				return await res.json();
-			})
-			.then((res) => {
-				setUsers(res.results);
-				originalUsers.current = res.results;
-			})
-			.catch((err) => {
-				setError(true);
-				console.log(err);
-			})
-			.finally(() => {
-				setIsLoading(false);
-			});
-	}, []);
+		if (sorting === SortBy.NONE) return filteredUsers;
+
+		const compareProperties: Record<string, (user: User) => any> = {
+			[SortBy.COUNTRY]: (user) => user.location.country,
+			[SortBy.NAME]: (user) => user.name.first,
+			[SortBy.LAST]: (user) => user.name.last,
+		};
+
+		return filteredUsers.toSorted((a, b) => {
+			const extractProperty = compareProperties[sorting];
+			return extractProperty(a).localeCompare(extractProperty(b));
+		});
+	}, [filteredUsers, sorting]);
 
 	return (
 		<>
 			<h1>Buscador de personas</h1>
+
+			<Results />
 
 			<header className="botones">
 				<button onClick={toggleColors}>Colorear</button>
@@ -106,17 +96,21 @@ function App() {
 			</header>
 
 			<main>
-				{isLoading && <div>Cargando...</div>}
-				{!isLoading && error && <div>Error al cargar los datos</div>}
-				{!isLoading && !error && users.length === 0 && <p>No hay usuarios</p>}
-				{!isLoading && !error && users.length > 0 && (
-					<UsersList
-						changeSorting={handleChangeSort}
-						handleDelete={handleDelete}
-						showColors={colored}
-						users={sortedUsers}
-					/>
+				{users.length > 0 && (
+					<>
+						<UsersList
+							changeSorting={handleChangeSort}
+							handleDelete={handleDelete}
+							showColors={colored}
+							users={sortedUsers}
+						/>
+						<div ref={ref} />
+					</>
 				)}
+				{isLoading && <strong>Cargando...</strong>}
+				{isError && <p>Error al cargar los datos</p>}
+				{!isLoading && !isError && users.length === 0 && <p>No hay usuarios</p>}
+				{!hasNextPage && <strong>Ya no hay mas datos</strong>}
 			</main>
 		</>
 	);
